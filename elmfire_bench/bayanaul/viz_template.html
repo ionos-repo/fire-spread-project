@@ -2,231 +2,231 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Unbounded:wght@500;600&display=swap">
 <style>
-/* Слой карты по центру, справа - приборы: погода в этот час, площадь, легенда. Земля степи, огонь - от тёмного угля к жёлтому фронту. */
+/* Две карты рядом на одном бегунке времени: слева и справа - любая из четырёх карт топлива. Ниже - площадь, точность, погода. */
 :root{
   --bg:#F3F0E8; --panel:#FBFAF6; --fg:#24211C; --muted:#6F685C; --line:#D9D2C3;
-  --grass:#E3DCC4; --grass2:#D6CCAA; --water:#B9CFDA; --bare:#CBC5B8; --tree:#AFBE94; --crop:#E6D9A8; --urban:#B3A8A0;
-  --burn-old:#5B1F14; --burn-mid:#C2410C; --burn-new:#F59E0B; --front:#FDE68A;
-  --box:#1D4ED8; --ign:#111111; --rain:#3B82F6; --accent:#C2410C;
+  --gr1:#EFE6BE; --gr2:#E6D592; --gr4:#D9BE5E; --gr7:#C9A43A; --gs:#C3C58A; --sh:#A9B07A; --tu:#8FA872; --tl:#6E8F5B;
+  --nb-urban:#B3A8A0; --nb-agri:#E7D8C4; --water:#AFC8D6; --bare:#CFC9BD;
+  --burn-old:#4A1A10; --burn-mid:#B8360B; --burn-new:#F08A1C; --front:#FFE27A;
+  --hot:#1D4ED8; --ign:#111111; --rain:#3B82F6; --accent:#B8360B;
   --f-display:"Unbounded","Arial Black",system-ui,sans-serif; --f-body:"IBM Plex Sans",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#16140F; --panel:#1E1B15; --fg:#EEE8DA; --muted:#A39A88; --line:#38332A;
-  --grass:#2E2A1F; --grass2:#3A3424; --water:#1E3440; --bare:#2A2722; --tree:#2B3524; --crop:#3A3420; --urban:#3A3430;
+  --gr1:#3A3523; --gr2:#4A4226; --gr4:#5A4E25; --gr7:#6B5A22; --gs:#444829; --sh:#3D4528; --tu:#2F4426; --tl:#26381F;
+  --nb-urban:#3A3430; --nb-agri:#3B3328; --water:#1E3440; --bare:#2C2924;
   --burn-old:#7A2A18; --burn-mid:#E2581E; --burn-new:#FBBF24; --front:#FEF3C7;
-  --box:#7EA6FF; --ign:#FFFFFF; --rain:#60A5FA; --accent:#F07B3F; color-scheme:dark}}
+  --hot:#8FB4FF; --ign:#FFFFFF; --rain:#60A5FA; --accent:#F07B3F; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#16140F; --panel:#1E1B15; --fg:#EEE8DA; --muted:#A39A88; --line:#38332A;
-  --grass:#2E2A1F; --grass2:#3A3424; --water:#1E3440; --bare:#2A2722; --tree:#2B3524; --crop:#3A3420; --urban:#3A3430;
+  --gr1:#3A3523; --gr2:#4A4226; --gr4:#5A4E25; --gr7:#6B5A22; --gs:#444829; --sh:#3D4528; --tu:#2F4426; --tl:#26381F;
+  --nb-urban:#3A3430; --nb-agri:#3B3328; --water:#1E3440; --bare:#2C2924;
   --burn-old:#7A2A18; --burn-mid:#E2581E; --burn-new:#FBBF24; --front:#FEF3C7;
-  --box:#7EA6FF; --ign:#FFFFFF; --rain:#60A5FA; --accent:#F07B3F; color-scheme:dark}
+  --hot:#8FB4FF; --ign:#FFFFFF; --rain:#60A5FA; --accent:#F07B3F; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5}
-.wrap{max-width:1180px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1240px;margin:0 auto;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;margin-bottom:14px}
 h1{font-family:var(--f-display);font-weight:600;font-size:clamp(22px,3.4vw,32px);margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:500;font-size:17px;margin:28px 0 8px}
 .sub{color:var(--muted);font-size:14px}
-.grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px}
-@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
-.mapbox{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
-canvas#map{display:block;width:100%;height:auto;aspect-ratio:1/1;max-width:100%;cursor:crosshair;touch-action:none}
-.clock{position:absolute;left:12px;top:10px;font-family:var(--f-mono);font-size:13px;background:color-mix(in srgb,var(--panel) 88%,transparent);padding:6px 9px;border-radius:4px;border:1px solid var(--line);font-variant-numeric:tabular-nums}
-.clock b{font-family:var(--f-display);font-weight:500;font-size:20px;display:block;line-height:1.1}
-.probe{position:absolute;right:12px;bottom:10px;font-family:var(--f-mono);font-size:12px;color:var(--muted);background:color-mix(in srgb,var(--panel) 88%,transparent);padding:4px 8px;border-radius:4px;font-variant-numeric:tabular-nums;max-width:calc(100% - 24px)}
-.controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-top:12px}
-button{font:inherit;font-weight:500;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:5px;padding:6px 12px;cursor:pointer}
-button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-button.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding-block:10px;border-bottom:1px solid var(--line);margin-bottom:14px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.clock{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:13px;min-width:210px}
+.clock b{font-family:var(--f-display);font-weight:500;font-size:19px;margin-right:6px}
+button,select{font:inherit;font-weight:500;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:5px;padding:6px 12px;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #play{min-width:96px}
-input[type=range]{flex:1 1 260px;accent-color:var(--accent);min-width:0}
-.seg{display:flex;gap:0}
-.seg button{border-radius:0}.seg button:first-child{border-radius:5px 0 0 5px}.seg button:last-child{border-radius:0 5px 5px 0;margin-left:-1px}
-aside{display:flex;flex-direction:column;gap:14px;min-width:0}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px}
+input[type=range]{flex:1 1 240px;accent-color:var(--accent);min-width:0}
+label.chk{display:flex;gap:6px;align-items:center;font-size:14px;color:var(--muted);cursor:pointer}
+.wxline{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;width:100%}
+.maps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:760px){.maps{grid-template-columns:minmax(0,1fr)}}
+.pane{min-width:0}
+.phead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 10px;margin-bottom:6px}
+.phead select{font-weight:600}
+.pstat{font-family:var(--f-mono);font-size:13px;font-variant-numeric:tabular-nums}
+.pstat b{font-family:var(--f-display);font-weight:500;font-size:18px}
+.mapbox{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+canvas.map{display:block;width:100%;height:auto;aspect-ratio:1/1;max-width:100%;cursor:crosshair;touch-action:none}
+.probe{position:absolute;left:8px;bottom:8px;font-family:var(--f-mono);font-size:11.5px;color:var(--fg);background:color-mix(in srgb,var(--panel) 88%,transparent);padding:3px 7px;border-radius:4px;font-variant-numeric:tabular-nums;max-width:calc(100% - 16px)}
+.fuelbars{display:flex;height:8px;border-radius:2px;overflow:hidden;margin-top:6px}
+.lower{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:18px;margin-top:6px}
+@media (max-width:900px){.lower{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;min-width:0}
 .lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.wx{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center}
-.wx dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0;font-variant-numeric:tabular-nums}
-.wx dt{color:var(--muted)}.wx dd{margin:0;font-family:var(--f-mono)}
-.big{font-family:var(--f-display);font-weight:500;font-size:26px;font-variant-numeric:tabular-nums}
-.big small{font-family:var(--f-body);font-size:13px;color:var(--muted);font-weight:400}
-.row{display:flex;justify-content:space-between;gap:10px;font-variant-numeric:tabular-nums}
 svg text{font-family:var(--f-mono);font-size:10px;fill:var(--muted)}
-.legend{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;align-items:center;font-size:13px}
-.sw{width:22px;height:12px;border-radius:2px}
-.ramp{height:10px;border-radius:2px;background:linear-gradient(90deg,var(--burn-old),var(--burn-mid),var(--burn-new),var(--front))}
-.note{font-size:13.5px;color:var(--muted);max-width:68ch}
-.note p{margin:.4em 0}
-table{border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;width:100%}
-th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums;width:100%}
+th,td{text-align:right;padding:5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
 th{font-weight:500;color:var(--muted);font-size:12px}
-.tw{overflow-x:auto;margin-top:16px}
-h2{font-family:var(--f-display);font-weight:500;font-size:17px;margin:26px 0 6px}
+td.best{font-weight:600;color:var(--accent)}
+.legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:5px 14px;font-size:13px}
+.legend div{display:flex;gap:7px;align-items:center}
+.sw{width:18px;height:11px;border-radius:2px;flex:none}
+.ramp{width:60px;height:10px;border-radius:2px;background:linear-gradient(90deg,var(--burn-old),var(--burn-mid),var(--burn-new),var(--front));flex:none}
+.note{font-size:14px;color:var(--fg);max-width:72ch}
+.note p{margin:.45em 0}
+.note .m{color:var(--muted);font-size:13.5px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
 <div class="wrap">
 <header>
   <h1>Пожар у Баянаула</h1>
-  <span class="sub">ELMFIRE 1.1 · 5–7 октября 2026 · Павлодарская обл., окно 60 × 60 км</span>
+  <span class="sub">ELMFIRE 1.1 на разных картах топлива · 5–7 октября 2024 · окно 60 × 60 км, сетка 100 м</span>
 </header>
 
-<div class="grid">
-  <div style="min-width:0">
-    <div class="mapbox">
-      <canvas id="map" width="900" height="900" aria-label="Карта распространения огня"></canvas>
-      <div class="clock" id="clock"></div>
-      <div class="probe" id="probe">наведите на карту</div>
-    </div>
-    <div class="controls">
-      <button id="play" type="button">▶ Пуск</button>
-      <input id="t" type="range" min="0" max="480" value="0" step="1" aria-label="Время от начала, часы">
-      <div class="seg" role="group" aria-label="Вариант ELMFIRE">
-        <button type="button" id="m1" class="on">как есть</button>
-        <button type="button" id="m005">скорость ×0,05</button>
-      </div>
-    </div>
-  </div>
+<div class="bar">
+  <button id="play" type="button">▶ Пуск</button>
+  <div class="clock" id="clock"></div>
+  <input id="t" type="range" min="0" max="480" value="250" step="1" aria-label="Время от начала, часы">
+  <label class="chk"><input type="checkbox" id="showfire" checked> гарь</label>
+  <label class="chk"><input type="checkbox" id="showhot" checked> термоточки</label>
+  <div class="wxline" id="wx"></div>
+</div>
 
-  <aside>
-    <div class="card">
-      <div class="lbl">Погода ERA5 в этот час</div>
-      <div class="wx">
-        <svg id="arrow" viewBox="-32 -32 64 64" width="64" height="64" aria-label="Ветер"></svg>
-        <dl id="wxdl"></dl>
-      </div>
-    </div>
-    <div class="card">
-      <div class="lbl">Сгорело по расчёту</div>
-      <div class="big" id="area"></div>
-      <svg id="chart" viewBox="0 0 290 120" width="100%" aria-label="Площадь по часам и осадки"></svg>
-      <div class="row" style="font-size:12px;color:var(--muted)"><span>— как есть · - - ×0,05</span><span style="color:var(--rain)">▮ дождь, мм/ч</span></div>
-    </div>
-    <div class="card">
-      <div class="lbl">Легенда</div>
-      <div class="legend">
-        <div class="ramp"></div><span>гарь: раньше → позже, светлое — фронт</span>
-        <svg width="22" height="12"><rect x="1" y="1" width="20" height="10" fill="none" stroke="var(--box)" stroke-width="1.6" stroke-dasharray="3 2"/></svg><span>охват термоточек очага (факт)</span>
-        <svg width="22" height="12"><circle cx="11" cy="6" r="4" fill="var(--ign)" stroke="var(--bg)" stroke-width="1.5"/></svg><span>первая термоточка очага</span>
-        <div class="sw" style="background:var(--grass2)"></div><span>трава (GR2)</span>
-        <div class="sw" style="background:var(--water)"></div><span>вода / не горит</span>
-        <div class="sw" style="background:var(--tree)"></div><span>лес, кустарник</span>
-      </div>
-    </div>
-  </aside>
+<div class="maps">
+  <div class="pane" id="paneA">
+    <div class="phead"><select id="selA" aria-label="Карта топлива слева"></select><span class="pstat" id="statA"></span></div>
+    <div class="mapbox"><canvas class="map" id="mapA" width="900" height="900" aria-label="Расчёт ELMFIRE, левая карта топлива"></canvas><div class="probe" id="probeA">наведите на карту</div></div>
+    <div class="fuelbars" id="barsA" aria-hidden="true"></div>
+  </div>
+  <div class="pane" id="paneB">
+    <div class="phead"><select id="selB" aria-label="Карта топлива справа"></select><span class="pstat" id="statB"></span></div>
+    <div class="mapbox"><canvas class="map" id="mapB" width="900" height="900" aria-label="Расчёт ELMFIRE, правая карта топлива"></canvas><div class="probe" id="probeB">наведите на карту</div></div>
+    <div class="fuelbars" id="barsB" aria-hidden="true"></div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px">
+  <div class="legend" id="legend"></div>
+</div>
+
+<h2>Сравнение карт топлива</h2>
+<div class="lower">
+  <div class="card">
+    <div class="lbl">К последней термоточке, +25 ч (06.10 21:00 UTC)</div>
+    <div class="tw"><table id="tbl"></table></div>
+    <p class="note m" style="margin-top:8px">«Факт» — клетки в пределах 400 м от 1276 термоточек шести очагов, около 230 км². Это грубая оценка гари, не контур. Точность — доля расчётной гари внутри факта, полнота — доля факта, до которой дошёл огонь.</p>
+  </div>
+  <div class="card">
+    <div class="lbl">Площадь по часам, км²</div>
+    <svg id="chart" viewBox="0 0 360 200" width="100%" aria-label="Площадь гари по часам для четырёх карт"></svg>
+  </div>
 </div>
 
 <h2>Что видно</h2>
 <div class="note" id="summary"></div>
-<div class="tw"><table id="foci"></table></div>
 <h2>Как считали</h2>
-<div class="note">
-<p>ELMFIRE 1.1 (level set, Ротермел, топливо Scott &amp; Burgan). Сетка 100 м в UTM 43N. Рельеф — Copernicus DEM 30 м, топливо — ESA WorldCover 2021, переведённое в FBFM40 той же таблицей, что в нашем датасете. Леса и кустарники считаются как поверхностное топливо, кроны не горят.</p>
-<p>Погода — ERA5 (Open-Meteo) в одной точке по часам, одинаковая на всё окно. Влажность мёртвого топлива считается по температуре и влажности воздуха, после дождя растёт. Живая трава в октябре сухая: 30 %. Тушение не учитывается.</p>
-<p>Зажигание — точка первой термоточки каждого из шести очагов, в её время. Все зажигания сдвинуты на 30 мин раньше: ELMFIRE останавливает расчёт, если в первый момент ничего не горит. Факт — прямоугольники охвата термоточек FIRMS. Это не контур гари, а грубая рамка: она шире реальной гари.</p>
+<div class="note m">
+<p>ELMFIRE 1.1 (level set, Ротермел, модели топлива Scott &amp; Burgan FBFM40, кроны не горят). Окно 60 × 60 км в UTM 43N, клетка 100 м. Рельеф — Copernicus DEM 30 м. Все карты топлива сведены на клетку 100 м по самому частому коду.</p>
+<p>Карты: новая карта Арная (20 м, Sentinel-2 + Sentinel-1 + рельеф, кластеры k-means → FBFM40), старая национальная карта, карта, на которой настроен ELMFIRE на сервере, и наша карта из ESA WorldCover. Код 93 (пашня) в ELMFIRE не горит.</p>
+<p>Погода одна для всех карт: ERA5 по часам в одной точке. Влажность сухого топлива считается по температуре и влажности воздуха, живая трава в октябре сухая (30 %). Зажигание — первая термоточка каждого из шести очагов, на 30 мин раньше. Тушение не учитывается, поэтому после +25 ч, когда в реальности огонь уже погас, расчёт продолжает расти.</p>
 </div>
 </div>
 
 <script id="data" type="application/json">__DATA__</script>
 <script>
 const D=JSON.parse(document.getElementById('data').textContent);
-const n=D.n, T0=Date.parse(D.t0), cv=document.getElementById('map'), ctx=cv.getContext('2d');
-const S=cv.width/n, TMAX=D.hours.length-1;
-let model='1', H=0, playing=false, last=0;
-const toa={}; for(const k in D.toa) toa[k]=Int16Array.from(D.toa[k]);
-const css=()=>{const s=getComputedStyle(document.documentElement);const g=v=>s.getPropertyValue(v).trim();
-  return {grass:g('--grass'),grass2:g('--grass2'),water:g('--water'),bare:g('--bare'),tree:g('--tree'),crop:g('--crop'),urban:g('--urban'),
-  old:g('--burn-old'),mid:g('--burn-mid'),nw:g('--burn-new'),front:g('--front'),box:g('--box'),ign:g('--ign'),bg:g('--bg'),fg:g('--fg'),muted:g('--muted'),rain:g('--rain'),line:g('--line'),accent:g('--accent')}};
+const n=D.n, T0=Date.parse(D.t0), TMAX=D.hours.length-1, KEYS=Object.keys(D.maps);
+const toa={}; for(const k of KEYS) toa[k]=Int16Array.from(D.toa[k]);
+let H=25, playing=false, last=0, sel={A:'new',B:'old'};
+const css=()=>{const s=getComputedStyle(document.documentElement);const o={};for(const v of ['gr1','gr2','gr4','gr7','gs','sh','tu','tl','nb-urban','nb-agri','water','bare','burn-old','burn-mid','burn-new','front','hot','ign','bg','fg','muted','rain','line','accent'])o[v]=s.getPropertyValue('--'+v).trim();return o};
 let C=css();
 const rgb=h=>{const c=document.createElement('canvas').getContext('2d');c.fillStyle=h;const v=c.fillStyle;
   if(v[0]==='#')return [1,3,5].map(i=>parseInt(v.slice(i,i+2),16));return v.match(/\d+/g).slice(0,3).map(Number)};
 const mix=(a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*t));
-let base, FUELC;
-function buildBase(){
-  const P={102:C.grass2,101:C.grass,104:C.crop,98:C.water,99:C.bare,92:C.water,91:C.urban,161:C.tree,121:C.tree};
-  FUELC={};for(const k in P)FUELC[k]=rgb(P[k]);
-  const img=new ImageData(n,n);
-  for(let i=0;i<n*n;i++){const c=FUELC[D.fuel[i]]||FUELC[99];img.data.set([c[0],c[1],c[2],255],i*4)}
-  base=document.createElement('canvas');base.width=base.height=n;base.getContext('2d').putImageData(img,0,0);
+// FBFM40 -> группа для цвета и легенды
+const GROUPS=[['gr1','трава редкая (GR1)',c=>c===101],['gr2','трава (GR2)',c=>c===102||c===103],['gr4','трава густая (GR4–5)',c=>c===104||c===105],
+  ['gr7','трава высокая (GR6–9)',c=>c>=106&&c<=109],['gs','трава с кустами (GS)',c=>c>=121&&c<=124],['sh','кустарник (SH)',c=>c>=141&&c<=149],
+  ['tu','лес с подлеском (TU)',c=>c>=161&&c<=165],['tl','подстилка (TL)',c=>c>=181&&c<=189],['nb-agri','пашня (93), не горит',c=>c===93],
+  ['nb-urban','застройка (91)',c=>c===91],['water','вода (98)',c=>c===98],['bare','не горит (92, 99)',c=>true]];
+const grp=c=>GROUPS.findIndex(g=>g[2](c));
+const NAMES={new:'Новая карта Арная',old:'Старая национальная',elm:'Карта ELMFIRE (сервер)',wc:'WorldCover (наш датасет)'};
+const bases={};
+function buildBases(){const cols=GROUPS.map(g=>rgb(C[g[0]]));
+  for(const k of KEYS){const img=new ImageData(n,n),f=D.fuel[k];
+    for(let i=0;i<n*n;i++){const c=cols[grp(f[i])];img.data.set([c[0],c[1],c[2],255],i*4)}
+    const cv=document.createElement('canvas');cv.width=cv.height=n;cv.getContext('2d').putImageData(img,0,0);bases[k]=cv}}
+const tmp=document.createElement('canvas');tmp.width=tmp.height=n;const tctx=tmp.getContext('2d');
+function drawMap(id,k){
+  const cv=document.getElementById('map'+id),ctx=cv.getContext('2d'),S=cv.width/n;
+  ctx.imageSmoothingEnabled=false;ctx.drawImage(bases[k],0,0,cv.width,cv.width);
+  if(document.getElementById('showfire').checked){
+    const a=toa[k],h10=H*10,img=tctx.createImageData(n,n);
+    const o=rgb(C['burn-old']),m=rgb(C['burn-mid']),w=rgb(C['burn-new']),f=rgb(C.front);
+    for(let i=0;i<n*n;i++){const t=a[i];if(t<=0||t>h10)continue;const age=(h10-t)/10;let c;
+      if(age<1)c=mix(f,w,age);else if(age<4)c=mix(w,m,(age-1)/3);else c=mix(m,o,Math.min((age-4)/12,1));
+      img.data.set([c[0],c[1],c[2],235],i*4)}
+    tctx.putImageData(img,0,0);ctx.drawImage(tmp,0,0,cv.width,cv.width)}
+  if(document.getElementById('showhot').checked){ctx.fillStyle=C.hot;
+    for(const [x,y,t] of D.hotspots){if(t>H)continue;ctx.globalAlpha=t>H-3?1:.55;ctx.fillRect(x*S-2.5,y*S-2.5,5,5)}ctx.globalAlpha=1}
+  for(const q of D.foci){if(H<q.t_first)continue;const [x,y]=q.ign;ctx.beginPath();ctx.arc(x*S,y*S,6,0,7);ctx.fillStyle=C.ign;ctx.fill();ctx.lineWidth=2;ctx.strokeStyle=C.bg;ctx.stroke()}
+  const km=10000/D.cell_m*S,x=cv.width-km-24,y=cv.width-30;
+  ctx.fillStyle=C.fg;ctx.fillRect(x,y,km,4);ctx.font='500 16px "IBM Plex Mono",monospace';ctx.textAlign='center';ctx.fillText('10 км',x+km/2,y-8);
+  ctx.beginPath();ctx.moveTo(cv.width-30,18);ctx.lineTo(cv.width-38,40);ctx.lineTo(cv.width-22,40);ctx.closePath();ctx.fill();ctx.fillText('С',cv.width-30,60);
+  // площадь и полоса долей топлива
+  const a=toa[k];let c=0;const h10=H*10;for(let i=0;i<a.length;i++)if(a[i]>0&&a[i]<=h10)c++;
+  document.getElementById('stat'+id).innerHTML=`<b>${fmtn(c*D.cell_m*D.cell_m/1e6,0)}</b> км²`;
 }
-const fire=document.createElement('canvas');fire.width=fire.height=n;const fctx=fire.getContext('2d');
-function draw(){
-  const a=toa[model], h10=H*10, img=fctx.createImageData(n,n);
-  const o=rgb(C.old),m=rgb(C.mid),w=rgb(C.nw),f=rgb(C.front);
-  for(let i=0;i<n*n;i++){const t=a[i];if(t<=0||t>h10)continue;
-    const age=(h10-t)/10;let c;
-    if(age<1)c=mix(f,w,age);else if(age<4)c=mix(w,m,(age-1)/3);else c=mix(m,o,Math.min((age-4)/12,1));
-    img.data.set([c[0],c[1],c[2],255],i*4)}
-  fctx.putImageData(img,0,0);
-  ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,cv.width,cv.width);
-  ctx.drawImage(base,0,0,cv.width,cv.width);ctx.drawImage(fire,0,0,cv.width,cv.width);
-  ctx.lineWidth=2;ctx.setLineDash([7,5]);
-  for(const q of D.foci){if(H<q.t_first)continue;const [x0,y0,x1,y1]=q.box;
-    ctx.strokeStyle=C.box;ctx.globalAlpha=H<=q.t_last?1:.55;ctx.strokeRect(x0*S,y0*S,(x1-x0)*S,(y1-y0)*S)}
-  ctx.globalAlpha=1;ctx.setLineDash([]);
-  for(const q of D.foci){if(H<q.t_first)continue;const [x,y]=q.ign;
-    ctx.beginPath();ctx.arc(x*S,y*S,6,0,7);ctx.fillStyle=C.ign;ctx.fill();ctx.lineWidth=2;ctx.strokeStyle=C.bg;ctx.stroke()}
-  // масштаб 10 км и север
-  const km=10000/D.cell_m*S, x=cv.width-km-28, y=cv.width-46;
-  ctx.fillStyle=C.fg;ctx.fillRect(x,y,km,4);ctx.font='500 15px "IBM Plex Mono",monospace';ctx.textAlign='center';ctx.fillText('10 км',x+km/2,y-8);
-  ctx.beginPath();ctx.moveTo(cv.width-30,22);ctx.lineTo(cv.width-38,44);ctx.lineTo(cv.width-22,44);ctx.closePath();ctx.fill();ctx.fillText('С',cv.width-30,62);
-  ui();
-}
+function bars(id,k){const cnt=new Array(GROUPS.length).fill(0);for(const v of D.fuel[k])cnt[grp(v)]++;
+  document.getElementById('bars'+id).innerHTML=cnt.map((v,i)=>v?`<span title="${GROUPS[i][1]}: ${fmtn(100*v/D.fuel[k].length,1)} %" style="width:${100*v/D.fuel[k].length}%;background:var(--${GROUPS[i][0]})"></span>`:'').join('')}
+const fmtn=(v,d)=>v.toFixed(d).replace('.',',');
 const pad=v=>String(v).padStart(2,'0');
 const fmt=(ms,off)=>{const d=new Date(ms+off*3600e3);return `${pad(d.getUTCDate())}.${pad(d.getUTCMonth()+1)} ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`};
-function wxAt(h){return D.hours[Math.min(Math.round(h),TMAX)]}
-function ui(){
-  const ms=T0+H*3600e3, w=wxAt(H);
-  document.getElementById('clock').innerHTML=`<b>+${H.toFixed(1).replace('.',',')} ч</b>${fmt(ms,5)} местн. · ${fmt(ms,0)} UTC`;
-  document.getElementById('wxdl').innerHTML=`<dt>ветер</dt><dd>${String(w.ws).replace('.',',')} м/с, ${rumb(w.wd)}</dd><dt>воздух</dt><dd>${String(w.T).replace('.',',')} °C, ${w.rh} %</dd><dt>осадки</dt><dd>${String(w.p).replace('.',',')} мм/ч</dd><dt>топливо 1 ч</dt><dd>${String(w.m1).replace('.',',')} %</dd>`;
-  const g=document.getElementById('arrow'), r=(w.wd+180)%360;
-  g.innerHTML=`<circle r="29" fill="none" stroke="${C.line}"/><text y="-19" text-anchor="middle" style="font-size:9px">С</text><g transform="rotate(${r})"><line y1="16" y2="-14" stroke="${C.accent}" stroke-width="3"/><path d="M0,-22 L-7,-10 L7,-10Z" fill="${C.accent}"/></g>`;
-  const a=toa[model];let c=0;const h10=H*10;for(let i=0;i<a.length;i++)if(a[i]>0&&a[i]<=h10)c++;
-  document.getElementById('area').innerHTML=`${(c*D.cell_m*D.cell_m/1e6).toFixed(1).replace('.',',')} <small>км² · ${model==='1'?'ELMFIRE как есть':'скорость ×0,05'}</small>`;
-  chart();
-  document.getElementById('t').value=Math.round(H*10);
-}
 const RUMB=['С','ССВ','СВ','ВСВ','В','ВЮВ','ЮВ','ЮЮВ','Ю','ЮЮЗ','ЮЗ','ЗЮЗ','З','ЗСЗ','СЗ','ССЗ'];
-const rumb=d=>'дует с '+RUMB[Math.round(d/22.5)%16];
-function chart(){
-  const W=290,Ht=120,l=30,r=6,t=8,b=20,A=D.area_km2,mx=Math.max(...A['1'])*1.05,pm=Math.max(...D.hours.map(h=>h.p),1);
-  const X=h=>l+(W-l-r)*h/TMAX, Y=v=>Ht-b-(Ht-b-t)*v/mx;
-  let s='';
-  for(const v of [0,200,400]) if(v<=mx) s+=`<line x1="${l}" x2="${W-r}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C.line}"/><text x="${l-4}" y="${Y(v)+3}" text-anchor="end">${v}</text>`;
-  for(const h of D.hours) if(h.p>0) s+=`<rect x="${X(h.h)-2}" width="4" y="${Ht-b-(Ht-b-t)*0.35*h.p/pm}" height="${(Ht-b-t)*0.35*h.p/pm}" fill="${C.rain}" opacity=".7"/>`;
-  for(const hh of [0,12,24,36,48]) s+=`<text x="${X(hh)}" y="${Ht-6}" text-anchor="middle">${hh} ч</text>`;
-  const path=k=>A[k].map((v,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join('');
-  s+=`<path d="${path('1')}" fill="none" stroke="${C.accent}" stroke-width="${model==='1'?2.4:1.4}"/>`;
-  s+=`<path d="${path('0.05')}" fill="none" stroke="${C.accent}" stroke-width="${model==='1'?1.4:2.4}" stroke-dasharray="4 3"/>`;
-  s+=`<line x1="${X(H)}" x2="${X(H)}" y1="${t}" y2="${Ht-b}" stroke="${C.fg}" stroke-width="1"/>`;
-  document.getElementById('chart').innerHTML=s;
+function draw(){
+  const ms=T0+H*3600e3,w=D.hours[Math.min(Math.round(H),TMAX)];
+  document.getElementById('clock').innerHTML=`<b>+${fmtn(H,1)} ч</b>${fmt(ms,5)} местн. · ${fmt(ms,0)} UTC`;
+  document.getElementById('wx').textContent=`ERA5: ветер ${fmtn(w.ws,1)} м/с с ${RUMB[Math.round(w.wd/22.5)%16]} · ${fmtn(w.T,1)} °C · влажность ${w.rh} % · осадки ${fmtn(w.p,1)} мм/ч · влажность сухой травы ${fmtn(w.m1,1)} %`;
+  drawMap('A',sel.A);drawMap('B',sel.B);chart();document.getElementById('t').value=Math.round(H*10);
 }
+function chart(){
+  const W=360,Ht=200,l=40,r=8,t=10,b=24,A=Object.fromEntries(KEYS.map(k=>[k,D.stats[k].area_km2]));
+  const mx=Math.max(...KEYS.map(k=>Math.max(...A[k])))*1.05,X=h=>l+(W-l-r)*h/TMAX,Y=v=>Ht-b-(Ht-b-t)*v/mx;
+  let s='';for(let v=0;v<=mx;v+=500)s+=`<line x1="${l}" x2="${W-r}" y1="${Y(v)}" y2="${Y(v)}" stroke="${C.line}"/><text x="${l-5}" y="${Y(v)+3}" text-anchor="end">${v}</text>`;
+  for(const hh of [0,12,24,36,48])s+=`<text x="${X(hh)}" y="${Ht-8}" text-anchor="middle">${hh} ч</text>`;
+  s+=`<line x1="${X(25)}" x2="${X(25)}" y1="${t}" y2="${Ht-b}" stroke="${C.hot}" stroke-dasharray="3 3"/><text x="${X(25)+4}" y="${t+9}" style="fill:${C.hot}">последняя термоточка</text>`;
+  const DASH={new:'',old:'6 3',elm:'2 3',wc:'9 3 2 3'};
+  for(const k of KEYS){const on=k===sel.A||k===sel.B;
+    s+=`<path d="${A[k].map((v,i)=>`${i?'L':'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join('')}" fill="none" stroke="${on?C.accent:C.muted}" stroke-width="${on?2.2:1.2}" stroke-dasharray="${DASH[k]}"/>`;
+    s+=`<text x="${W-r}" y="${Y(A[k][TMAX])-4}" text-anchor="end" style="fill:${on?C.fg:C.muted}">${NAMES[k].split(' ')[0]}</text>`}
+  s+=`<line x1="${X(H)}" x2="${X(H)}" y1="${t}" y2="${Ht-b}" stroke="${C.fg}"/>`;
+  document.getElementById('chart').innerHTML=s}
+// таблица
+(function(){const R=KEYS.map(k=>({k,...D.stats[k].at_end}));
+  const best=f=>Math.max(...R.map(r=>r[f]));
+  let s='<tr><th>карта топлива</th><th>площадь, км²</th><th>термоточек в гари</th><th>точность</th><th>полнота</th><th>F1</th></tr>';
+  for(const r of R)s+=`<tr><td>${NAMES[r.k]}</td><td>${r.area_km2} <span style="color:var(--muted)">(×${fmtn(r.area_km2/r.fact_km2,1)})</span></td><td class="${r.hotspots_in===best('hotspots_in')?'best':''}">${Math.round(100*r.hotspots_in)} %</td><td class="${r.precision===best('precision')?'best':''}">${fmtn(r.precision,2)}</td><td class="${r.recall===best('recall')?'best':''}">${fmtn(r.recall,2)}</td><td class="${r.f1===best('f1')?'best':''}">${fmtn(r.f1,2)}</td></tr>`;
+  document.getElementById('tbl').innerHTML=s})();
+document.getElementById('legend').innerHTML=`<div><span class="ramp"></span>гарь ELMFIRE: раньше → фронт</div><div><span class="sw" style="background:var(--hot)"></span>термоточки FIRMS (факт)</div><div><span class="sw" style="background:var(--ign);border-radius:50%;width:11px"></span>зажигание (очаг)</div>`+
+  GROUPS.map(g=>`<div><span class="sw" style="background:var(--${g[0]})"></span>${g[1]}</div>`).join('');
+const S=D.stats,e=k=>S[k].at_end;
+document.getElementById('summary').innerHTML=`<p>Погода и зажигания одинаковые, меняется только карта топлива, а площадь к +25 ч различается почти в четыре раза: от ${e('elm').area_km2} км² на карте ELMFIRE до ${e('old').area_km2} км² на старой национальной. По термоточкам выгорело около ${e('new').fact_km2} км².</p>
+<p><b>Новая карта Арная</b> даёт ${e('new').area_km2} км² (×${fmtn(e('new').area_km2/e('new').fact_km2,1)} к факту) и накрывает ${Math.round(100*e('new').hotspots_in)} % термоточек. Огонь на ней медленнее, чем на старой: больше густой травы (GR4) и кустарника (SH2), меньше сплошной травы GR2 и высокой GR7.</p>
+<p><b>Старая национальная карта</b> накрывает почти все термоточки (${Math.round(100*e('old').hotspots_in)} %), но выжигает в 3,5 раза больше факта: точность ${fmtn(e('old').precision,2)}. F1 у неё выше (${fmtn(e('old').f1,2)}) только потому, что факт целиком внутри огромной расчётной гари.</p>
+<p><b>Карта ELMFIRE на сервере</b> ближе всех по площади (${e('elm').area_km2} км²) и самая точная (${fmtn(e('elm').precision,2)}), но доходит лишь до ${Math.round(100*e('elm').hotspots_in)} % термоточек. У неё почти вся степь — трава с кустами GS2, а четверть окна — кустарник SH5.</p>
+<p class="m">Вывод по одному пожару осторожный: ни одна карта не воспроизводит быстрый рост реального пожара: к вечеру 6 октября термоточки растянулись на 30–35 км к северо-востоку от первого очага, а ELMFIRE до +25 ч доходит не до всех. Скорее всего, в реальности ветер у земли был сильнее, чем в ERA5 (3–6 м/с), и часть «очагов» — это один фронт. Для честного сравнения карт нужен контур гари по Sentinel-2 и несколько пожаров.</p>`;
 // управление
+for(const id of ['A','B']){const s=document.getElementById('sel'+id);
+  s.innerHTML=KEYS.map(k=>`<option value="${k}">${NAMES[k]}</option>`).join('');s.value=sel[id];
+  s.addEventListener('change',()=>{sel[id]=s.value;bars(id,s.value);draw()});bars(id,sel[id]);
+  const cv=document.getElementById('map'+id);const [c00,c10,c11,c01]=D.corners_lonlat;
+  cv.addEventListener('pointermove',ev=>{const R=cv.getBoundingClientRect(),u=(ev.clientX-R.left)/R.width,v=(ev.clientY-R.top)/R.height;if(u<0||u>1||v<0||v>1)return;
+    const lon=(1-v)*((1-u)*c00[0]+u*c10[0])+v*((1-u)*c01[0]+u*c11[0]),lat=(1-v)*((1-u)*c00[1]+u*c10[1])+v*((1-u)*c01[1]+u*c11[1]);
+    const i=Math.floor(v*n)*n+Math.floor(u*n),code=D.fuel[sel[id]][i],t=toa[sel[id]][i];
+    document.getElementById('probe'+id).textContent=`${lat.toFixed(3)}° с. ш., ${lon.toFixed(3)}° в. д. · FBFM ${code} · `+(t>0?`огонь +${fmtn(t/10,1)} ч`:'не горит')})}
 const tEl=document.getElementById('t');tEl.max=TMAX*10;
 tEl.addEventListener('input',()=>{H=tEl.value/10;stop();draw()});
+for(const id of ['showfire','showhot'])document.getElementById(id).addEventListener('change',draw);
 const pb=document.getElementById('play');
 function stop(){playing=false;pb.textContent='▶ Пуск'}
 pb.addEventListener('click',()=>{if(playing){stop();return}if(H>=TMAX)H=0;playing=true;pb.textContent='❚❚ Пауза';last=performance.now();requestAnimationFrame(tick)});
 function tick(now){if(!playing)return;H=Math.min(TMAX,H+(now-last)/1000*2.4);last=now;draw();if(H>=TMAX){stop();return}requestAnimationFrame(tick)}
-for(const [id,k] of [['m1','1'],['m005','0.05']]) document.getElementById(id).addEventListener('click',()=>{model=k;
-  document.getElementById('m1').classList.toggle('on',k==='1');document.getElementById('m005').classList.toggle('on',k!=='1');draw()});
-// подсказка под курсором: координаты и время прихода
-const [c00,c10,c11,c01]=D.corners_lonlat;
-cv.addEventListener('pointermove',e=>{const R=cv.getBoundingClientRect(),u=(e.clientX-R.left)/R.width,v=(e.clientY-R.top)/R.height;
-  if(u<0||u>1||v<0||v>1)return;
-  const lon=(1-v)*((1-u)*c00[0]+u*c10[0])+v*((1-u)*c01[0]+u*c11[0]), lat=(1-v)*((1-u)*c00[1]+u*c10[1])+v*((1-u)*c01[1]+u*c11[1]);
-  const i=Math.floor(v*n)*n+Math.floor(u*n), t=toa[model][i];
-  document.getElementById('probe').textContent=`${lat.toFixed(4)}° с. ш., ${lon.toFixed(4)}° в. д. · `+(t>0?`огонь через ${(t/10).toFixed(1).replace('.',',')} ч (${fmt(T0+t*360e3,5)} местн.)`:'не горит');});
-// текст и таблица очагов
-const A=D.area_km2, at=h=>A['1'][h].toFixed(0);
-document.getElementById('summary').innerHTML=`<p>Шесть очагов по термоточкам FIRMS: первый вечером 5 октября, остальные утром 6-го. Дул юго-западный ветер 9–13 м/с, поэтому огонь в расчёте уходит на северо-восток, туда же, куда расползались термоточки.</p>
-<p>ELMFIRE как есть за первые 15 ч выжигает ${at(15)} км². Около 09 UTC 6 октября пошёл дождь, влажность поднялась до 98–100 %, и рост остановился, как и в реальности: последние термоточки — днём и вечером 6-го. 7 октября днём подсыхает, и в расчёте огонь снова идёт, до ${at(TMAX)} км² к +48 ч. В реальности после 6-го термоточек нет: огонь, скорее всего, потушили или он погас, а тушения ELMFIRE не знает.</p>
-<p>Вариант со скоростью ×0,05 (как наша FBP) здесь почти не растёт: ${A['0.05'][TMAX].toFixed(1).replace('.',',')} км². Этот пожар был быстрым, и поправка, подобранная на средних пожарах, для него слишком сильная.</p>`;
-let tb='<tr><th>очаг</th><th>точек</th><th>первая, UTC</th><th>последняя, UTC</th><th>координаты первой</th></tr>';
-for(const q of D.foci) tb+=`<tr><td>${q.id}</td><td>${q.n}</td><td>${q.first.slice(8,10)}.${q.first.slice(5,7)} ${q.first.slice(11)}</td><td>${q.last.slice(8,10)}.${q.last.slice(5,7)} ${q.last.slice(11)}</td><td>${q.lonlat[1].toFixed(4)} N, ${q.lonlat[0].toFixed(4)} E</td></tr>`;
-document.getElementById('foci').innerHTML=tb;
-// тема
-function retheme(){C=css();buildBase();draw()}
+function retheme(){C=css();buildBases();draw()}
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',retheme);
 new MutationObserver(retheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
-buildBase();H=Math.min(15,TMAX);draw();
+buildBases();draw();
 </script>
