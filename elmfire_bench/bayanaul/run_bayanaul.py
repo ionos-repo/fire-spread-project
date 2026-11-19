@@ -6,7 +6,7 @@
 Окно 60 x 60 км, сетка 100 м, UTM 43N. Рельеф - Copernicus DEM 30 м (AWS). Карты топлива FBFM40 (fuel/, вырезаны с сервера
 gis, /data/arnai_fuelmapping/final_fuelampping), на сетку 100 м - модой:
   new  - новая карта Арная (output/fueltype_labeled_pt75e50n_k40.tif, 20 м, S2 + S1 + DEM, k-means k=40)
-  old  - старая национальная (fire_spread/cases/bayanaul_20241006/fbfm40_old_pt75e50n.tif)
+  old  - старая национальная /data/FIRE_DANGER/DATA/fuel_map/fuelmap_kz_fbfm40Reclass.tif (= fbfm40_old_pt75e50n.tif в fire_spread/cases/bayanaul_20241006, пиксель в пиксель)
   elm  - карта настройки ELMFIRE на сервере (fbfm40_elmfire_pt75e50n.tif)
   wc   - ESA WorldCover 2021 -> FBFM40 таблицей task1 шаг 08 (наш датасет)
 Погода - ERA5 (Open-Meteo, wx_era5.json) в одной точке, по часам: ветер 10 м -> 20 фт (x0,87); влажность мёртвого топлива

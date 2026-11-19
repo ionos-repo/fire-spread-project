@@ -122,7 +122,7 @@ td.best{font-weight:600;color:var(--accent)}
 <h2>Как считали</h2>
 <div class="note m">
 <p>ELMFIRE 1.1 (level set, Ротермел, модели топлива Scott &amp; Burgan FBFM40, кроны не горят). Окно 60 × 60 км в UTM 43N, клетка 100 м. Рельеф — Copernicus DEM 30 м. Все карты топлива сведены на клетку 100 м по самому частому коду.</p>
-<p>Карты: новая карта Арная (20 м, Sentinel-2 + Sentinel-1 + рельеф, кластеры k-means → FBFM40), старая национальная карта, карта, на которой настроен ELMFIRE на сервере, и наша карта из ESA WorldCover. Код 93 (пашня) в ELMFIRE не горит.</p>
+<p>Карты: новая карта Арная (20 м, Sentinel-2 + Sentinel-1 + рельеф, кластеры k-means → FBFM40), старая национальная карта (<code>/data/FIRE_DANGER/DATA/fuel_map/fuelmap_kz_fbfm40Reclass.tif</code>; её копия на сервере в <code>fire_spread/cases/bayanaul_20241006/fbfm40_old_pt75e50n.tif</code> совпадает с ней пиксель в пиксель), карта, на которой настроен ELMFIRE на сервере, и наша карта из ESA WorldCover. Код 93 (пашня) в ELMFIRE не горит.</p>
 <p>Погода одна для всех карт: ERA5 по часам в одной точке. Влажность сухого топлива считается по температуре и влажности воздуха, живая трава в октябре сухая (30 %). Зажигание — первая термоточка каждого из шести очагов, на 30 мин раньше. Тушение не учитывается, поэтому после +25 ч, когда в реальности огонь уже погас, расчёт продолжает расти.</p>
 </div>
 </div>
@@ -144,7 +144,7 @@ const GROUPS=[['gr1','трава редкая (GR1)',c=>c===101],['gr2','тра�
   ['tu','лес с подлеском (TU)',c=>c>=161&&c<=165],['tl','подстилка (TL)',c=>c>=181&&c<=189],['nb-agri','пашня (93), не горит',c=>c===93],
   ['nb-urban','застройка (91)',c=>c===91],['water','вода (98)',c=>c===98],['bare','не горит (92, 99)',c=>true]];
 const grp=c=>GROUPS.findIndex(g=>g[2](c));
-const NAMES={new:'Новая карта Арная',old:'Старая национальная',elm:'Карта ELMFIRE (сервер)',wc:'WorldCover (наш датасет)'};
+const NAMES={new:'Новая карта Арная',old:'Старая национальная (fbfm40Reclass)',elm:'Карта ELMFIRE (сервер)',wc:'WorldCover (наш датасет)'};
 const bases={};
 function buildBases(){const cols=GROUPS.map(g=>rgb(C[g[0]]));
   for(const k of KEYS){const img=new ImageData(n,n),f=D.fuel[k];
