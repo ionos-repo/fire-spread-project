@@ -181,6 +181,10 @@ class Live:
             p = out["mask"][k] & ~burned
             H = dict(pred=dict(type="FeatureCollection", features=E.geojson(p, r0, c0)), pred_km2=float(p.sum()) * (CELL / 1000) ** 2,
                      total=dict(type="FeatureCollection", features=E.geojson(p | burned, r0, c0)))   # общий контур: старт + прогноз
+            for nm, bm in out.get("band", {}).items():         # it13: диапазон P10/P90 по ошибке модели k
+                bp = bm[k] & ~burned; H[f"pred_{nm}_km2"] = float(bp.sum()) * (CELL / 1000) ** 2
+                if nm == "p90":
+                    H["pred_p90"] = dict(type="FeatureCollection", features=E.geojson(bp, r0, c0))
             if p.any():                                         # куда смещается огонь: центр новой гари относительно текущей, дальний край
                 pr, pc = np.nonzero(p); plon, plat = E.land.lonlat(r0 + pr, c0 + pc)
                 kx = 111.32 * np.cos(np.radians(blat))

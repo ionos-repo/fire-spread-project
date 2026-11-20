@@ -220,6 +220,7 @@ function drawLive() {
   liveLayers.push(L.geoJSON(lcur.start, {style: {weight: 0, fillColor: "#3a3a3a", fillOpacity: 0.9}}).addTo(map));
   liveLayers.push(L.geoJSON(H.pred, {style: {color: "#2e86ab", weight: 2, fillColor: "#2e86ab", fillOpacity: 0.3}}).addTo(map));
   if (H.total) liveLayers.push(L.geoJSON(H.total, {style: {color: "#0b3c5d", weight: 2.5, dashArray: "6 4", fill: false}, interactive: false}).addTo(map));
+  if (H.pred_p90) liveLayers.push(L.geoJSON(H.pred_p90, {style: {color: "#2e86ab", weight: 1.5, dashArray: "2 4", fill: false}, interactive: false}).addTo(map));
   const A = lalt ? lalt.horizons[lhz] : null;
   if (A) liveLayers.push(L.geoJSON(A.pred, {style: {color: "#d1495b", weight: 2, dashArray: "5 4", fillColor: "#d1495b", fillOpacity: 0.08}}).addTo(map));
   for (const [lo, la] of lcur.hotspots) liveLayers.push(L.circleMarker([la, lo], {radius: 2.5, color: "#8a6d00", weight: 1, fillColor: "#ffd23f", fillOpacity: 1}).addTo(map));
@@ -229,7 +230,8 @@ function drawLive() {
   $("lwind").textContent = w ? (w.steady >= 0.5 ? `${w.from_name}, ${w.speed_ms.toFixed(0)} м/с → на ${w.to_name}` : `переменный, ${w.speed_ms.toFixed(0)} м/с`) : "—";
   const mv = H.move || (A && A.move);
   $("lmove").textContent = mv ? `на ${mv.to_name}, до ${mv.reach_km.toFixed(1)} км от кромки` + (H.move ? "" : " (если не погаснет)") : "не растёт";
-  if (A) $("lpred").textContent = H.pred_km2.toFixed(1) + " км² (если не погаснет " + A.pred_km2.toFixed(1) + ")";
+  if (H.pred_p90_km2 != null) $("lpred").textContent = H.pred_km2.toFixed(1) + " км² (диапазон " + H.pred_p10_km2.toFixed(1) + "–" + H.pred_p90_km2.toFixed(1) + ")";
+  if (A) $("lpred").textContent += " (если не погаснет " + A.pred_km2.toFixed(1) + ")";
 }
 $("lhz").onclick = e => { const b = e.target.closest("button"); if (!b) return; lhz = b.dataset.h;
   for (const x of $("lhz").children) x.classList.toggle("on", x === b); drawLive(); };

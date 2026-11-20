@@ -46,6 +46,7 @@ class FireEngine:
             self.kdyn = joblib.load(os.path.join(models, cfg["k_dyn"]))
         # it13: тот же k в режиме «активный пожар» - c / ref · mult (ref - среднее c по растущим срезам val, mult - подбор по val)
         self.kdyn_active = cfg.get("k_dyn_active") if self.kdyn is not None else None
+        self.k_band = cfg.get("k_band") if self.kdyn is not None else None      # {"p10": r, "p90": r} - множители c для диапазона
         # expected - гибрид U-Net + физика (шаг 21); active - физика, откалиброванная по растущим пожарам (шаг 22, блок "sim")
         self.heads = {"expected": self._head(cfg["deploy"]), "active": self._head(cfg.get("sim", cfg["deploy"]))}
         f = cfg.get("sim", {}).get("speed_factor")              # симулятор после 72 ч: прирост «эффективного времени» за сутки
@@ -144,15 +145,23 @@ class FireEngine:
         t = np.asarray(T, np.float32); far = t >= TMAX
         lt = np.log(np.clip(np.where(far, TMAX, t), 0.5, TMAX)[None] / np.array(HZ, np.float32)[:, None, None])
         p = np.clip(P.astype(np.float32) / 255, 0.5 / 255, 254.5 / 255); lp = np.log(p / (1 - p))
-        prob = np.zeros(P.shape, np.float32); mask = np.zeros(P.shape, bool)
-        for k, h in enumerate(HZ):
-            ws = float(np.nan_to_num(row.get(f"fc_gfsa_ws_mean_{h}h", 0.0)))
-            W = H["W"][k]; z = W[0] * lp[k] + W[1] * lt[k] + W[2] * far + W[3] * lt[k] * ws + H["b"][k]
-            q = np.round(255 / (1 + np.exp(-z))).astype(np.uint8)
-            prob[k] = H["lut"][k][q] * valid[0]; mask[k] = (q >= H["level"][k]) & valid[0]
-        for k in range(1, len(HZ)):                                 # вложенность горизонтов: 12 ⊂ 24 ⊂ 48 ⊂ 72 ч
-            mask[k] |= mask[k - 1]; prob[k] = np.maximum(prob[k], prob[k - 1])
-        return dict(prob=prob, mask=mask, unet=P.astype(np.float32) / 255, arrival_h=np.minimum(t, TMAX), k_ros=self.k_ros * c, c_online=c_online,
+
+        def head(lt):
+            prob = np.zeros(P.shape, np.float32); mask = np.zeros(P.shape, bool)
+            for k, h in enumerate(HZ):
+                ws = float(np.nan_to_num(row.get(f"fc_gfsa_ws_mean_{h}h", 0.0)))
+                W = H["W"][k]; z = W[0] * lp[k] + W[1] * lt[k] + W[2] * far + W[3] * lt[k] * ws + H["b"][k]
+                q = np.round(255 / (1 + np.exp(-z))).astype(np.uint8)
+                prob[k] = H["lut"][k][q] * valid[0]; mask[k] = (q >= H["level"][k]) & valid[0]
+            for k in range(1, len(HZ)):                             # вложенность горизонтов: 12 ⊂ 24 ⊂ 48 ⊂ 72 ч
+                mask[k] |= mask[k - 1]; prob[k] = np.maximum(prob[k], prob[k - 1])
+            return prob, mask
+        prob, mask = head(lt)
+        band = {}
+        if mode == "expected" and self.k_band:                      # it13: диапазон по ошибке модели k (P10/P90 c* / c): T/r ⇒ log(T/h) − log r
+            for nm, r in self.k_band.items():
+                band[nm] = head(lt - np.log(r) * ~far[None])[1]
+        return dict(band=band, prob=prob, mask=mask, unet=P.astype(np.float32) / 255, arrival_h=np.minimum(t, TMAX), k_ros=self.k_ros * c, c_online=c_online,
                     area_km2=(mask.reshape(len(HZ), -1).sum(1) * (CELL / 1000) ** 2).tolist())
 
     # ---------- геометрия ----------

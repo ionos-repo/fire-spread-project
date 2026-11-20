@@ -13,4 +13,5 @@
   Офлайн (35_k_active_check.py, растущие срезы): тест 0.086/0.132/0.156/0.164 -> 0.106/0.161/0.178/0.183. Код в engine (k_dyn_active ref=0.7138 mult=1.589) и prod_hybrid.json; бэкап prod_hybrid_before_kact.json. ОСТАЛОСЬ: prod/checks.py после eval 1c (не параллельно)
 - [~] 3. Онлайн-ассимиляция FIRMS на сайте
   Код: engine.online_c (физика с t−24 ч, c по наблюдённому росту, вес w_online=0.4), live.forecast передаёт c_online, в ответе k_ros/k_online. live.db только 03–10.11.2026 -> ретроспектива слабая; офлайн-оценка it12: +0.01/+0.005 (12/24 ч). ОСТАЛОСЬ: smoke-тест live.forecast на 2 пожарах после eval
-- [ ] 4. Контуры P10/P50/P90
+- [~] 4. Контуры P10/P50/P90
+  Резидуал log c* − log c_модели (растущие val): P10/P50/P90 ×0.19/0.53/1.46. Код: engine band (сдвиг log(T/h)), live pred_p10_km2/pred_p90_km2/pred_p90, сайт: пунктир P90 + «диапазон». Конфиг k_band в prod_hybrid.json. ОСТАЛОСЬ: checks + smoke
