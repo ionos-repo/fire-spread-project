@@ -7,4 +7,5 @@ U=wx_tta,wxbig_tta,wxn_tta,wxbign_tta
 [ -f out_v3/blow_reserves.npy ] || (cd scripts && KV=2 ../$PY 34_blowup.py > ../out_v3/log_blowup.txt 2>&1)
 step it13_base  ITER=12 NAME=all4kdyn UNET=$U HEAD=hybrid PHYS_SFX=_kdyn HYB_VAL=1 $PY scripts/26_iter_eval.py
 step it13_blow  ITER=13 NAME=all4kdynblow UNET=$U HEAD=hybrid PHYS_SFX=_kdyn HYB_VAL=1 BLOW=1 $PY scripts/26_iter_eval.py
+step it13_mono  ITER=13 NAME=all4kdynmono UNET=$U HEAD=hybrid PHYS_SFX=_kdyn_mono HYB_VAL=1 $PY scripts/26_iter_eval.py
 echo "all done $(date +%H:%M)"

@@ -17,3 +17,4 @@
 - [~] 4. Контуры P10/P50/P90
   Резидуал log c* − log c_модели (растущие val): P10/P50/P90 ×0.19/0.53/1.46. Код: engine band (сдвиг log(T/h)), live pred_p10_km2/pred_p90_km2/pred_p90, сайт: пунктир P90 + «диапазон». Конфиг k_band в prod_hybrid.json. ОСТАЛОСЬ: checks + smoke
 - [ ] 5. prod/checks.py (лог prod/checks_log_it13.txt) — запущено
+- [ ] 6. k монотонный по ветру (проверка 2 «площадь растёт с ветром» упала: штиль 65 км² > 6 м/с 45): MONO=1 33 -> k_dyn_mono.joblib, 36_kdyn_T.py -> phys_T_*_kdyn_mono.npy (готово), физика тест 0.058/0.102/0.125/0.125 (=). ДАЛЕЕ: run_iter6.sh (it13_mono), 35 с KSFX=_mono, конфиг, checks

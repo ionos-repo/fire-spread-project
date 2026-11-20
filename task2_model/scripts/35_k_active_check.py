@@ -2,7 +2,7 @@ import os, sys, numpy as np, joblib
 sys.path.insert(0, os.path.dirname(os.path.abspath("33_k_dyn.py")))
 import importlib.util
 s = importlib.util.spec_from_file_location("kd", "33_k_dyn.py"); kd = importlib.util.module_from_spec(s); s.loader.exec_module(kd)
-OUT = kd.OUT; mdl = joblib.load(os.path.join(OUT, "k_dyn.joblib"))["model"]
+OUT = kd.OUT; mdl = joblib.load(os.path.join(OUT, f"k_dyn{os.environ.get('KSFX', '')}.joblib"))["model"]
 def f1(G, c, h, m):
     tp, fp, fn = kd.at_c(G, c)[h]; tp, fp, fn = tp[m].sum(), fp[m].sum(), fn[m].sum(); return 2*tp/max(2*tp+fp+fn, 1)
 res = {}

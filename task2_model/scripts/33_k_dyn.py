@@ -29,7 +29,8 @@ SCAL = ["gfwed_FWI", "gfwed_ISI", "gfwed_BUI", "gfwed_FFMC", "gfwed_DC", "era5_P
         "af_12h", "k_12h", "hour_utc", "lat", "lon"]
 WX = ["ws_mean", "gust_max", "T_max", "RH_min", "P_sum"]
 KV = os.environ.get("KV", "1")                                     # it13: KV=2 - + влажность почвы, VPD, HDW, DMC, FWI_max3d (Holden 2025)
-SFX = "" if KV == "1" else f"_v{KV}"
+SFX = ("" if KV == "1" else f"_v{KV}") + ("_mono" if os.environ.get("MONO") else "")
+# it13: MONO=1 - log c не убывает с ветром (ws_mean, gust_max окон 24/72 ч): площадь физики×c растёт с ветром (проверка prod/checks 2)
 EXTRA_S = ["era5_soilm_t", "era5_VPD_mean_prev7d", "gfwed_DMC", "gfwed_FWI_max3d"]
 
 
@@ -48,6 +49,9 @@ def extra(si, src):
 
 
 EXTRA_N = EXTRA_S + [f"{n}_{H}h" for H in (24, 72) for n in ("VPD", "HDW", "HDWg")]
+
+
+MONO_IDX = {len(MAPS) + k * len(WX) + WX.index(w) for k in range(2) for w in ("ws_mean", "gust_max")}
 
 
 def grid(T, Y, L):
@@ -126,7 +130,8 @@ if __name__ == "__main__":
     si, G, X = data["train"]; grow = G[2][:, 3] >= 4                # рост за 72 ч ≥ 1 км²
     cs = c_star(G[0], G[2]); y = np.log(cs)
     mdl = HistGradientBoostingRegressor(max_iter=400, learning_rate=0.05, max_leaf_nodes=31, min_samples_leaf=50, l2_regularization=1.0,
-                                        random_state=0).fit(X[grow], y[grow])
+                                        random_state=0,
+                                        monotonic_cst=[1 if j in MONO_IDX else 0 for j in range(X.shape[1])] if os.environ.get("MONO") else None).fit(X[grow], y[grow])
     print("train c*: median", np.median(cs[grow]).round(3), "IQR", np.percentile(cs[grow], [25, 75]).round(3), flush=True)
 
     sv, Gv, Xv = data["val"]; cv_model = np.exp(mdl.predict(Xv))
@@ -147,7 +152,7 @@ if __name__ == "__main__":
                        ("оракул c*", c_star(G_[0], G_[2]))):
             rows += summ(G_, c, tag, part)
     d = pd.DataFrame(rows); d.to_csv(os.path.join(OUT, f"k_dyn{SFX}.csv"), index=False)
-    joblib.dump(dict(model=mdl, scale=float(s_best), w_online=float(w_best), k0=K0, maps=MAPS, scal=SCAL, wx=WX, c_one=float(c_one), kv=KV, extra=EXTRA_S if KV != "1" else []), os.path.join(OUT, f"k_dyn{SFX}.joblib"))
+    joblib.dump(dict(model=mdl, scale=float(s_best), w_online=float(w_best), k0=K0, maps=MAPS, scal=SCAL, wx=WX, c_one=float(c_one), kv=KV, mono=bool(os.environ.get("MONO")), extra=EXTRA_S if KV != "1" else []), os.path.join(OUT, f"k_dyn{SFX}.joblib"))
     pd.set_option("display.width", 220); print(d.round(3).to_string(index=False))
     imp = pd.Series(np.abs(np.corrcoef(np.column_stack([X[grow], y[grow]]).T)[-1, :-1]), index=MAPS + [f"{w}_{H}h" for H in (24, 72) for w in WX] + SCAL + ["doy_s", "doy_c"] + (EXTRA_N if KV != "1" else []))
     print("|corr| с log c*:", imp.sort_values(ascending=False).head(10).round(2).to_dict())
