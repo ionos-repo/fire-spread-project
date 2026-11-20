@@ -16,6 +16,6 @@
   Код: engine.online_c (физика с t−24 ч, c по наблюдённому росту, вес w_online=0.4), live.forecast передаёт c_online, в ответе k_ros/k_online. live.db только 03–10.11.2026 -> ретроспектива слабая; офлайн-оценка it12: +0.01/+0.005 (12/24 ч). ОСТАЛОСЬ: smoke-тест live.forecast на 2 пожарах после eval
 - [~] 4. Контуры P10/P50/P90
   Резидуал log c* − log c_модели (растущие val): P10/P50/P90 ×0.19/0.53/1.46. Код: engine band (сдвиг log(T/h)), live pred_p10_km2/pred_p90_km2/pred_p90, сайт: пунктир P90 + «диапазон». Конфиг k_band в prod_hybrid.json. ОСТАЛОСЬ: checks + smoke
-- [ ] 5. prod/checks.py (лог prod/checks_log_it13.txt) — запущено
+- [x] 5. checks: пройдены (checks_log_it13b.txt); smoke live.forecast на 06 и 08.11 — работает, онлайн-k срабатывает. ОСТАЛОСЬ: перезапуск сайта — с согласия пользователя
 - [x] 6. k монотонный по ветру (проверка 2 «площадь растёт с ветром» упала: штиль 65 км² > 6 м/с 45): MONO=1 33 -> k_dyn_mono.joblib, 36_kdyn_T.py -> phys_T_*_kdyn_mono.npy (готово), физика тест 0.058/0.102/0.125/0.125 (=). ДАЛЕЕ: run_iter6.sh (it13_mono), 35 с KSFX=_mono, конфиг, checks
   ИТОГ 6: гибрид mono val 0.313/0.315/0.330/0.336 (= it12), тест 0.249/0.248/0.286/0.307, заповедники 0.295/0.425/0.465/0.498. ПРИНЯТО. Экспорт: k_dyn_mono.joblib, k_dyn_active ref=0.7323 mult=1.511, k_band 0.18/1.43. Бэкап prod_hybrid_before_it13mono.json. ДАЛЕЕ: checks (prod/checks_log_it13b.txt), smoke live.forecast
