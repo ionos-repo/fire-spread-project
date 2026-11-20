@@ -89,7 +89,8 @@ def main():
     U = json.load(open(os.path.join(OUTD, "prod_hybrid.json")))["deploy"].get("unet", {}).get("probs", ["wx"])   # офлайн-вероятности того же ансамбля
     Pofs = [np.load(os.path.join(OUTD, f"probs_{u}_gfsa_test.npy"), mmap_mode="r") for u in U]
     Pof = type("P", (), {"__getitem__": lambda s, i: np.round(np.mean([np.asarray(p[i], np.float32) for p in Pofs], 0))})()
-    Tof = np.load(os.path.join(OUTD, "phys_T_test_gfsa.npy"), mmap_mode="r")
+    kd = os.path.join(OUTD, "phys_T_test_gfsa_kdyn.npy")         # it12: переменный k - офлайн-физика T / c (task2 шаг 33)
+    Tof = np.load(kd if E.kdyn is not None and os.path.exists(kd) else os.path.join(OUTD, "phys_T_test_gfsa.npy"), mmap_mode="r")
     idx = np.sort(np.random.default_rng(0).choice(len(ci), 400, replace=False))
     st = {k: np.zeros((3, 4)) for k in ("engine", "offline", "engine_active_on_growing")}; H = E.heads["expected"]
     for i in idx:

@@ -35,7 +35,7 @@ if __name__ == "__main__":
     si, M, Y, L = ev12.load_part("val")
     U = [u for u in os.environ.get("UNET", "wx").split(",")]
     Pu = np.round(np.mean([np.asarray(h20.ld(f"probs_{u}_gfsa_val.npy"), np.float32) for u in U], 0)).astype(np.uint8)
-    P = h20.apply(models, Pu, h20.ld("phys_T_val_gfsa.npy"), si, "gfsa")
+    P = h20.apply(models, Pu, h20.ld(f"phys_T_val_gfsa{os.environ.get('PHYS_SFX', '')}.npy"), si, "gfsa")   # it12: PHYS_SFX=_kdyn
     cal = ev12.fit_calib(P, Y, L, np.random.default_rng(0))
     # режим «активный пожар» (симулятор): порог по F1 только на срезах, где пожар реально рос (≥ 1 км² за горизонт) -
     # прогноз «куда пойдёт огонь, если не погаснет»; обычный порог - ожидаемый исход с учётом затухания мелких пожаров
@@ -49,5 +49,6 @@ if __name__ == "__main__":
                          lut={f"{h}h": np.round(c["lut"], 5).tolist() for h, c in zip(HZ, cal)},
                          level={f"{h}h": int(c["level"]) for h, c in zip(HZ, cal)}, level_active=lev_act,
                          unet=dict(models=os.environ.get("MODELS", "wx").split(","), tta=os.environ.get("TTA") == "1", probs=U))
+    cfg["k_dyn"] = os.environ.get("KDYN") or None              # it12: out_v3/k_dyn.joblib - k_ros по местности/сезону (шаг 33) для режима «прогноз»
     json.dump(cfg, open(f, "w"), indent=1)
     print(var, "levels", [c["level"] for c in cal], flush=True)

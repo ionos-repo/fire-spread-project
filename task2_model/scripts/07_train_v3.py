@@ -15,11 +15,13 @@ sys.path.insert(0, os.path.dirname(__file__))
 from common_v3 import *
 
 RUN = os.environ.get("RUN", "wx"); WX = RUN.startswith("wx")
-EPOCHS = int(os.environ.get("EPOCHS", 24)); BS = 48; CROP = 80; LR = 2e-3
+EPOCHS = int(os.environ.get("EPOCHS", 24)); BS = 48; CROP = 80; LR = float(os.environ.get("LR", 2e-3))
 dev = "cuda" if torch.cuda.is_available() else "cpu"
 SEED = int(os.environ.get("SEED", 0)); PHYS = os.environ.get("PHYS") == "1"     # итерации: SEED - другая инициализация, PHYS - физический канал
 AUG_GFS = os.environ.get("AUG_GFS") == "1"   # it6+: к погоде ERA5 добавляются ошибки прогноза GFS (шаг 28, val 2022), p = 0,5
 EDGE = float(os.environ.get("EDGE", 1.0))    # it8: вес фона в 1 клетке от метки (< 1 - мягче штраф за промах на клетку у края)
+INIT = os.environ.get("INIT")              # it10: дообучение с out_v3/<INIT>_best.pt
+BIG_OS = [tuple(float(v) for v in x.split(":")) for x in os.environ.get("BIG_OS", "").split(",") if x]   # it10: "10:3,50:6" - срезы с ростом 72 ч ≥ 10 км² берутся в 3 раза чаще, ≥ 50 - в 6
 torch.manual_seed(SEED); np.random.seed(SEED)
 
 
@@ -86,6 +88,13 @@ if __name__ == "__main__":
     sch = torch.optim.lr_scheduler.OneCycleLR(opt, LR, total_steps=EPOCHS * nb, pct_start=0.1)
     flast = os.path.join(OUT, f"{RUN}_last.pt"); fbest = os.path.join(OUT, f"{RUN}_best.pt")
     ep0, log, best = 0, [], -1.0
+    if INIT and not os.path.exists(flast):
+        model.load_state_dict(torch.load(os.path.join(OUT, f"{INIT}_best.pt"), map_location=dev, weights_only=False)["state"]); print("init from", INIT, flush=True)
+    samp_p = None
+    if BIG_OS:
+        g = si_tr.new_72h_km2.fillna(0).values; wts = np.ones(len(g))
+        for thr, k in BIG_OS: wts[g >= thr] = k
+        samp_p = wts / wts.sum(); print("BIG_OS", BIG_OS, "share of big in epoch", round(float(samp_p[g >= BIG_OS[0][0]].sum()), 3), flush=True)
     if os.path.exists(flast):
         ck = torch.load(flast, map_location=dev, weights_only=False)
         model.load_state_dict(ck["model"]); opt.load_state_dict(ck["opt"]); sch.load_state_dict(ck["sch"])
@@ -93,7 +102,7 @@ if __name__ == "__main__":
         np.random.set_state(ck["np_rng"]); torch.set_rng_state(ck["torch_rng"].cpu())
         print(f"resume from epoch {ep0}, best {best:.4f}", flush=True)
     for ep in range(ep0, EPOCHS):
-        model.train(); t0 = time.time(); perm = np.random.permutation(len(si_tr)); Ls = []
+        model.train(); t0 = time.time(); perm = np.random.permutation(len(si_tr)) if samp_p is None else np.random.choice(len(si_tr), len(si_tr), p=samp_p); Ls = []
         idx = [np.sort(perm[i:i + BS]) for i in range(0, len(perm), BS)]
         with ThreadPoolExecutor(2) as ex:
             futs = [ex.submit(batch, Mtr, Ytr, Ltr, Ztr, idx[j]) for j in range(min(3, len(idx)))]
@@ -126,7 +135,7 @@ if __name__ == "__main__":
         log.append(row)
         print(f"epoch {ep:2d} loss {row['loss']:.4f} val F1 " + " ".join(f"{r[0]:.3f}" for r in res) + f" mean {f:.4f} ({row['sec']:.0f} s)", flush=True)
         if f > best:
-            best = f; torch.save(dict(state=model.state_dict(), cin=Mtr.shape[1], ns=Ztr.shape[1], wx=WX, epoch=ep, phys=PHYS, seed=SEED, aug_gfs=AUG_GFS, edge=EDGE,
+            best = f; torch.save(dict(state=model.state_dict(), cin=Mtr.shape[1], ns=Ztr.shape[1], wx=WX, epoch=ep, phys=PHYS, seed=SEED, aug_gfs=AUG_GFS, edge=EDGE, init=INIT, big_os=BIG_OS,
                                       th=[r[1] for r in res]), fbest)
         torch.save(dict(model=model.state_dict(), opt=opt.state_dict(), sch=sch.state_dict(), epoch=ep, log=log, best=best,
                         np_rng=np.random.get_state(), torch_rng=torch.get_rng_state()), flast + ".tmp")

@@ -52,7 +52,8 @@ def unet_probs(src, part):
 
 
 def physT(part, src):
-    return np.load(os.path.join(OUT, f"phys_T_{part}_{src}.npy"), mmap_mode="r")[:LIMIT]
+    f = os.path.join(OUT, f"phys_T_{part}_{src}{os.environ.get('PHYS_SFX', '')}.npy")   # it12: PHYS_SFX=_kdyn - T / c (переменный k, шаг 33)
+    return np.load(f if os.path.exists(f) else os.path.join(OUT, f"phys_T_{part}_{src}.npy"), mmap_mode="r")[:LIMIT]
 
 
 # ---------- признаки бустинга ----------

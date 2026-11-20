@@ -29,7 +29,8 @@ def _up2(a, r0, c0, n):
 class Landscape:
     def __init__(self, kz=KZ):
         self.kz = kz
-        lc = np.load(os.path.join(kz, "lc.npz")); self.FR = lc["frac"]; self.FB = lc["fbfm40"]; self.COV = lc["covered"]
+        # своя карта топлива: FIRE_LC=<npz из fuel_import.py>, иначе WorldCover + старая FBFM40
+        lc = np.load(os.environ.get("FIRE_LC") or os.path.join(kz, "lc.npz")); self.FR = lc["frac"]; self.FB = lc["fbfm40"]; self.COV = lc["covered"]
         dem = np.load(os.path.join(kz, "dem.npz")); self.ELEV = dem["elev"]; self.SLOPE = dem["slope"]
         osm = np.load(os.path.join(kz, "osm.npz")); self.DSET = osm["dist_settlement_km"]; self.DROAD = osm["dist_road_km"]; self.RDEN = osm["road_density"]
         cl = np.load(os.path.join(kz, "ndvi_clim.npz")); self.CLIM = _pad(cl["ndvi"]); self.CLIM_DOY = np.asarray(cl["doy"])
