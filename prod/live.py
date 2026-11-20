@@ -151,10 +151,11 @@ class Live:
         lon, lat = float(g.lon.mean()), float(g.lat.mean())
         row_w, _ = E._weather(lat, lon, t, "gfs")
         X, valid, row, r0, c0, flags = E._scene_at(state, t, t0, ign, k12, row_w, hs)
-        out = E.predict_scene(X, valid, row, mode)
+        c_on = E.online_c(state, t, t0, ign, lon, lat, k12) if mode == "expected" else None   # it13: подстройка k по росту за сутки
+        out = E.predict_scene(X, valid, row, mode, c_online=c_on)
         n = X.shape[-1]; burned = X[0, 0] > 0.5
         res = dict(t_utc=str(t), fire_start_utc=str(g.t.min()), k_12h=k12, state_km2=float(burned.sum()) * (CELL / 1000) ** 2,
-                   weather_src=row.get("weather_src"), flags=flags,
+                   weather_src=row.get("weather_src"), flags=flags, k_ros=round(float(out["k_ros"]), 4), k_online=c_on is not None,
                    start=dict(type="FeatureCollection", features=E.geojson(burned, r0, c0)),
                    hotspots=[[round(p.lon, 5), round(p.lat, 5), round((t - p.t).total_seconds() / 3600, 1)] for p in g.itertuples()],
                    horizons={})

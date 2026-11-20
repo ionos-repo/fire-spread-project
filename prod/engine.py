@@ -108,12 +108,37 @@ class FireEngine:
         ndvi = np.nan_to_num(g("ndvi"), nan=0.0)                       # как в шаге 14 (кэш: пропуск NDVI -> 0); на этом подобраны веса гибрида
         return sp.arrival(g("burned_frac") > 0, fuel, ndvi, elev, winds, ffmc, k_ros=self.k_ros * c, lat=row.get("lat"))   # ячейка на местности по широте
 
-    def predict_scene(self, X, valid, row, mode="expected"):
+    C_GRID = np.exp(np.linspace(np.log(0.05), np.log(20), 49))      # сетка c, как task2 шаг 33
+
+    def online_c(self, state, t, t0, ign_g, lon, lat, k_12h, weather="gfs"):
+        """it13: подстройка k по ходу пожара (как online() шага 33, ассимиляция FIRMS). Физика из состояния на t−24 ч при c = 1;
+        c_on - при котором площадь прогноза за 24 ч ближе всего к наблюдённому росту (≥ 4 клеток = 1 км²). Нет истории - None."""
+        dt = (t - t0).total_seconds() / 3600
+        prev = {k: v for k, v in state.items() if v <= dt - 24}
+        if not prev or self.kdyn is None:
+            return None
+        tp = t - pd.Timedelta(hours=24)
+        try:
+            row_w, _ = self._weather(lat, lon, tp, weather)
+        except Exception:
+            return None
+        X, valid, row, r0, c0, _ = self._scene_at(prev, tp, t0, ign_g, max(k_12h - 2, 0), row_w)
+        n = X.shape[-1]; burned = X[0, CH.index("burned_frac")] > 0
+        obs = sum(1 for (r, c), v in state.items() if dt - 24 < v <= dt and r0 <= r < r0 + n and c0 <= c < c0 + n and not burned[r - r0, c - c0])
+        if obs < 4:
+            return None
+        T = np.asarray(self._physics(X, row, 1.0), np.float32); tt = T[valid[0] & ~burned]
+        cnt = np.array([(tt <= c * 24).sum() for c in self.C_GRID])
+        return float(self.C_GRID[int(np.argmin(np.abs(np.log1p(cnt) - np.log1p(obs))))])
+
+    def predict_scene(self, X, valid, row, mode="expected", c_online=None):
         """-> dict: prob [4,96,96] калиброванная, mask [4,96,96], unet [4,96,96], arrival_h [96,96] (физика), area_km2 [4].
         mode="expected" - гибрид U-Net + физика, ожидаемый исход (мелкие пожары часто гаснут) - для прогноза реальных пожаров;
         "active" - физика, откалиброванная на срезах, где пожар рос (≥ 1 км²): «куда пойдёт огонь, если не погаснет» - для симулятора."""
         H = self.heads[mode]
         c = self.k_factor(X, valid, row) if mode == "expected" else (self.k_factor(X, valid, row, active=True) if self.kdyn_active else 1.0)
+        if c_online is not None and mode == "expected" and self.kdyn is not None:   # it13: смесь с онлайн-оценкой (вес по val, шаг 33)
+            w = float(self.kdyn.get("w_online", 0.4)); c = float(np.exp(w * np.log(c_online) + (1 - w) * np.log(c)))
         T = self._physics(X, row, c)
         P = self._unet(X, valid, row, T) if any(w[0] != 0 for w in H["W"]) else np.zeros((len(HZ),) + T.shape, np.uint8)   # sim: без U-Net
         t = np.asarray(T, np.float32); far = t >= TMAX
@@ -127,7 +152,7 @@ class FireEngine:
             prob[k] = H["lut"][k][q] * valid[0]; mask[k] = (q >= H["level"][k]) & valid[0]
         for k in range(1, len(HZ)):                                 # вложенность горизонтов: 12 ⊂ 24 ⊂ 48 ⊂ 72 ч
             mask[k] |= mask[k - 1]; prob[k] = np.maximum(prob[k], prob[k - 1])
-        return dict(prob=prob, mask=mask, unet=P.astype(np.float32) / 255, arrival_h=np.minimum(t, TMAX), k_ros=self.k_ros * c,
+        return dict(prob=prob, mask=mask, unet=P.astype(np.float32) / 255, arrival_h=np.minimum(t, TMAX), k_ros=self.k_ros * c, c_online=c_online,
                     area_km2=(mask.reshape(len(HZ), -1).sum(1) * (CELL / 1000) ** 2).tolist())
 
     # ---------- геометрия ----------
