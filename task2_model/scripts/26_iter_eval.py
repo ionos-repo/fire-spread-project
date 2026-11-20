@@ -173,6 +173,11 @@ if __name__ == "__main__":
     rng = np.random.default_rng(0); t0 = time.time()
     parts = {p: tuple(a.iloc[:LIMIT].reset_index(drop=True) if k == 0 else a[:LIMIT] for k, a in enumerate(ev12.load_part(p)))
              for p in ("val", "test", "reserves")}
+    if os.environ.get("BLOW"):                                   # it13: признаки «взрывного роста» (шаг 34) в стекинг гибрида
+        for p, (si_, *_r) in parts.items():
+            B = np.load(os.path.join(OUT, f"blow_{p}.npy"))[:len(si_)]
+            for j, H in enumerate(HZ):
+                si_[f"blow_big_{H}"] = B[:, j]; si_[f"blow_zero_{H}"] = B[:, 4 + j]
     si_v, M_v, Y_v, L_v = parts["val"]
     fit_src = {s: (s if all(os.path.exists(os.path.join(OUT, f"probs_{u}_{s}_val.npy")) for u in UNET) else "gfsa") for s in ("gfsa", "era5")}
     for head in HEADS:
@@ -187,6 +192,8 @@ if __name__ == "__main__":
                 fs = fit_src[src]; Pv = unet_probs(fs, "val"); Tv = physT("val", fs)
                 ms = ev20.fit(ev20.sample(Pv, Tv, Y_v, L_v, si_v, fs, np.arange(len(si_v)), rng))
                 cal = ev12.fit_calib(ev20.apply(ms, Pv, Tv, si_v, fs), Y_v, L_v, rng)
+                if part == "test" and os.environ.get("HYB_VAL"):       # val в выборке (для сравнения вариантов головы)
+                    rows += score_rows(head, fs, "val", ev20.apply(ms, Pv, Tv, si_v, fs), cal, si_v, M_v, Y_v, L_v)
                 si, M, Y, L = parts[part]; P = ev20.apply(ms, unet_probs(src, part), physT(part, src), si, src)
                 np.save(os.path.join(OUT, f"probs_{NAME}_hybrid_{src}_{part}.npy"), P)
                 rows += score_rows(head, src, part, P, cal, si, M, Y, L)

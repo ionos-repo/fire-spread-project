@@ -28,6 +28,26 @@ MAPS = ["grass_frac", "crop_frac", "shrub_tree_frac", "nonburnable_frac", "ndvi"
 SCAL = ["gfwed_FWI", "gfwed_ISI", "gfwed_BUI", "gfwed_FFMC", "gfwed_DC", "era5_P_sum_prev7d", "era5_RH_min_prev24h", "state_km2",
         "af_12h", "k_12h", "hour_utc", "lat", "lon"]
 WX = ["ws_mean", "gust_max", "T_max", "RH_min", "P_sum"]
+KV = os.environ.get("KV", "1")                                     # it13: KV=2 - + влажность почвы, VPD, HDW, DMC, FWI_max3d (Holden 2025)
+SFX = "" if KV == "1" else f"_v{KV}"
+EXTRA_S = ["era5_soilm_t", "era5_VPD_mean_prev7d", "gfwed_DMC", "gfwed_FWI_max3d"]
+
+
+def vpd(T, RH):
+    """кПа по T °C и RH % (Тетенс)."""
+    return 0.6108 * np.exp(17.27 * T / (T + 237.3)) * (1 - np.clip(RH, 0, 100) / 100)
+
+
+def extra(si, src):
+    """it13: доп. признаки из индекса срезов (без карт): почва, VPD, HDW = ветер × VPD (прогнозные окна 24/72 ч)."""
+    pre = "fc_gfsa" if src == "gfsa" else "era5"; g = lambda c: si[c].astype(float).values
+    cols = [g(c) for c in EXTRA_S]
+    for H in (24, 72):
+        v = vpd(g(f"{pre}_T_max_{H}h"), g(f"{pre}_RH_min_{H}h")); cols += [v, v * g(f"{pre}_ws_mean_{H}h"), v * g(f"{pre}_gust_max_{H}h")]
+    return np.column_stack(cols)
+
+
+EXTRA_N = EXTRA_S + [f"{n}_{H}h" for H in (24, 72) for n in ("VPD", "HDW", "HDWg")]
 
 
 def grid(T, Y, L):
@@ -99,6 +119,8 @@ if __name__ == "__main__":
             z = np.load(f); G, X = (z["A"], z["TP"], z["ACT"]), z["X"]
         else:
             G = grid(T[:n], Y, L); X = features(M, si, src); np.savez(f, A=G[0], TP=G[1], ACT=G[2], X=X)
+        if KV != "1":
+            X = np.column_stack([X, extra(si, src)])
         data[part] = (si, G, X); print(part, n, "ready", flush=True)
 
     si, G, X = data["train"]; grow = G[2][:, 3] >= 4                # рост за 72 ч ≥ 1 км²
@@ -120,12 +142,12 @@ if __name__ == "__main__":
     for part in ("val", "test"):
         s_, G_, X_ = data[part]; cm = np.exp(mdl.predict(X_)) * s_best; con = online(s_, G_)
         cb = np.where(np.isnan(con), cm, np.exp(w_best * np.log(np.nan_to_num(con, nan=1)) + (1 - w_best) * np.log(cm)))
-        np.save(os.path.join(OUT, f"k_dyn_c_{part}.npy"), np.column_stack([cm, cb]).astype(np.float32))
+        np.save(os.path.join(OUT, f"k_dyn_c_{part}{SFX}.npy"), np.column_stack([cm, cb]).astype(np.float32))
         for tag, c in (("k0=0.05", np.ones(len(s_))), (f"один k={c_one * K0:.3f}", np.full(len(s_), c_one)), ("модель k", cm), ("модель k + онлайн", cb),
                        ("оракул c*", c_star(G_[0], G_[2]))):
             rows += summ(G_, c, tag, part)
-    d = pd.DataFrame(rows); d.to_csv(os.path.join(OUT, "k_dyn.csv"), index=False)
-    joblib.dump(dict(model=mdl, scale=float(s_best), w_online=float(w_best), k0=K0, maps=MAPS, scal=SCAL, wx=WX, c_one=float(c_one)), os.path.join(OUT, "k_dyn.joblib"))
+    d = pd.DataFrame(rows); d.to_csv(os.path.join(OUT, f"k_dyn{SFX}.csv"), index=False)
+    joblib.dump(dict(model=mdl, scale=float(s_best), w_online=float(w_best), k0=K0, maps=MAPS, scal=SCAL, wx=WX, c_one=float(c_one), kv=KV, extra=EXTRA_S if KV != "1" else []), os.path.join(OUT, f"k_dyn{SFX}.joblib"))
     pd.set_option("display.width", 220); print(d.round(3).to_string(index=False))
-    imp = pd.Series(np.abs(np.corrcoef(np.column_stack([X[grow], y[grow]]).T)[-1, :-1]), index=MAPS + [f"{w}_{H}h" for H in (24, 72) for w in WX] + SCAL + ["doy_s", "doy_c"])
+    imp = pd.Series(np.abs(np.corrcoef(np.column_stack([X[grow], y[grow]]).T)[-1, :-1]), index=MAPS + [f"{w}_{H}h" for H in (24, 72) for w in WX] + SCAL + ["doy_s", "doy_c"] + (EXTRA_N if KV != "1" else []))
     print("|corr| с log c*:", imp.sort_values(ascending=False).head(10).round(2).to_dict())

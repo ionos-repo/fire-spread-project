@@ -20,11 +20,22 @@ TMAX = 1000.0; NEG_RATE = 0.03
 yy, xx = np.mgrid[0:96, 0:96]
 
 
-def feats(P, T, ws, h):
-    """P [n,96,96] u8, T [n,96,96] f16 (ч), ws [n] -> [n,96,96,4] f32."""
+def feats(P, T, ws, h, bl=None):
+    """P [n,96,96] u8, T [n,96,96] f16 (ч), ws [n] -> [n,96,96,4] f32.
+    it13: bl [n,2] - logit p(большой рост), logit p(нет роста) за горизонт (шаг 34) -> + 4 признака."""
     p = np.clip(P.astype(np.float32) / 255, 0.5 / 255, 254.5 / 255); lp = np.log(p / (1 - p))
     t = T.astype(np.float32); far = (~np.isfinite(t)) | (t >= TMAX); lt = np.log(np.clip(np.where(far, TMAX, t), 0.5, TMAX) / HZ[h])
-    return np.stack([lp, lt, far.astype(np.float32), lt * ws[:, None, None]], -1)
+    F_ = [lp, lt, far.astype(np.float32), lt * ws[:, None, None]]
+    if bl is not None:
+        bb = np.broadcast_to(bl[:, 0, None, None], lp.shape); bz = np.broadcast_to(bl[:, 1, None, None], lp.shape)
+        F_ += [bb, bz, bb * lt, bz * lp]
+    return np.stack(F_, -1)
+
+
+def blow(si, h):
+    """it13: признаки шага 34 из колонок si (blow_big_<h>, blow_zero_<h>), если есть."""
+    c = (f"blow_big_{HZ[h]}", f"blow_zero_{HZ[h]}")
+    return si[list(c)].values.astype(np.float32) if c[0] in si else None
 
 
 def wind_speed(si, src, h):
@@ -37,9 +48,9 @@ def sample(P, T, Y, L, si, src, idx, rng):
     out = []
     for h in range(len(HZ)):
         Xs, ys, ws_ = [], [], []
-        ws = wind_speed(si, src, h)
+        ws = wind_speed(si, src, h); bl = blow(si, h)
         for c in np.array_split(idx, max(1, len(idx) // 256)):
-            F_ = feats(P[c, h], T[c], ws[c], h); m = ev12.eval_mask(Y[c], L[c], h); y = (Y[c, h] > 0) & m
+            F_ = feats(P[c, h], T[c], ws[c], h, None if bl is None else bl[c]); m = ev12.eval_mask(Y[c], L[c], h); y = (Y[c, h] > 0) & m
             keep = y | (m & (rng.random(m.shape) < NEG_RATE))
             Xs.append(F_[keep]); ys.append(y[keep]); ws_.append(np.where(y[keep], 1.0, 1 / NEG_RATE))
         out.append((np.concatenate(Xs), np.concatenate(ys), np.concatenate(ws_)))
@@ -54,9 +65,9 @@ def apply(models, P, T, si, src):
     """-> P_hyb [n,4,96,96] u8."""
     out = np.zeros(P.shape, np.uint8)
     for h, lr in enumerate(models):
-        ws = wind_speed(si, src, h); w, b = lr.coef_[0], lr.intercept_[0]
+        ws = wind_speed(si, src, h); w, b = lr.coef_[0], lr.intercept_[0]; bl = blow(si, h)
         for c in np.array_split(np.arange(len(P)), max(1, len(P) // 256)):
-            z = feats(P[c, h], T[c], ws[c], h) @ w + b
+            z = feats(P[c, h], T[c], ws[c], h, None if bl is None else bl[c]) @ w + b
             out[c, h] = np.round(255 / (1 + np.exp(-z))).astype(np.uint8)
     return out
 
