@@ -44,6 +44,8 @@ class FireEngine:
         if cfg.get("k_dyn"):
             import joblib
             self.kdyn = joblib.load(os.path.join(models, cfg["k_dyn"]))
+        # it13: тот же k в режиме «активный пожар» - c / ref · mult (ref - среднее c по растущим срезам val, mult - подбор по val)
+        self.kdyn_active = cfg.get("k_dyn_active") if self.kdyn is not None else None
         # expected - гибрид U-Net + физика (шаг 21); active - физика, откалиброванная по растущим пожарам (шаг 22, блок "sim")
         self.heads = {"expected": self._head(cfg["deploy"]), "active": self._head(cfg.get("sim", cfg["deploy"]))}
         f = cfg.get("sim", {}).get("speed_factor")              # симулятор после 72 ч: прирост «эффективного времени» за сутки
@@ -77,7 +79,7 @@ class FireEngine:
         p = acc / (len(self.nets) * len(tf))
         return np.round(p * 255).astype(np.uint8)
 
-    def k_factor(self, X, valid, row):
+    def k_factor(self, X, valid, row, active=False):
         """Множитель c к k_ros по сцене у кромки пожара и погоде (как признаки task2 шаг 33); без модели - 1."""
         if self.kdyn is None:
             return 1.0
@@ -92,7 +94,10 @@ class FireEngine:
             sc[kd["scal"].index(c)] = np.log1p(sc[kd["scal"].index(c)])
         d = pd.Timestamp(row.get("t_utc") or pd.Timestamp.utcnow()).dayofyear
         x = np.array([f + sc + [np.sin(2 * np.pi * d / 365.25), np.cos(2 * np.pi * d / 365.25)]], np.float64)
-        return float(np.exp(kd["model"].predict(x)[0]) * kd["scale"])
+        raw = float(np.exp(kd["model"].predict(x)[0]))
+        if active:                                                  # it13: активный режим - относительно среднего по растущим срезам val
+            ka = self.kdyn_active; return raw / ka["ref"] * ka["mult"]
+        return raw * kd["scale"]
 
     def _physics(self, X, row, c=1.0):
         g = lambda k: X[0, CH.index(k)]
@@ -108,7 +113,7 @@ class FireEngine:
         mode="expected" - гибрид U-Net + физика, ожидаемый исход (мелкие пожары часто гаснут) - для прогноза реальных пожаров;
         "active" - физика, откалиброванная на срезах, где пожар рос (≥ 1 км²): «куда пойдёт огонь, если не погаснет» - для симулятора."""
         H = self.heads[mode]
-        c = self.k_factor(X, valid, row) if mode == "expected" else 1.0
+        c = self.k_factor(X, valid, row) if mode == "expected" else (self.k_factor(X, valid, row, active=True) if self.kdyn_active else 1.0)
         T = self._physics(X, row, c)
         P = self._unet(X, valid, row, T) if any(w[0] != 0 for w in H["W"]) else np.zeros((len(HZ),) + T.shape, np.uint8)   # sim: без U-Net
         t = np.asarray(T, np.float32); far = t >= TMAX

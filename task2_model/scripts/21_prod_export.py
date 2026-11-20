@@ -50,5 +50,7 @@ if __name__ == "__main__":
                          level={f"{h}h": int(c["level"]) for h, c in zip(HZ, cal)}, level_active=lev_act,
                          unet=dict(models=os.environ.get("MODELS", "wx").split(","), tta=os.environ.get("TTA") == "1", probs=U))
     cfg["k_dyn"] = os.environ.get("KDYN") or None              # it12: out_v3/k_dyn.joblib - k_ros по местности/сезону (шаг 33) для режима «прогноз»
+    if os.environ.get("KDYN_ACTIVE"):                          # it13: "ref,mult" (шаг 35_k_active_check.py) - тот же k в режиме «активный пожар»
+        r_, m_ = map(float, os.environ["KDYN_ACTIVE"].split(",")); cfg["k_dyn_active"] = dict(ref=r_, mult=m_)
     json.dump(cfg, open(f, "w"), indent=1)
     print(var, "levels", [c["level"] for c in cal], flush=True)

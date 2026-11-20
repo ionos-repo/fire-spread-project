@@ -9,6 +9,7 @@
   ИТОГ 1b: AUC большого роста тест 0.73–0.86, заповедники 0.75–0.85 (out_v3/blowup.csv, blow_<part>.npy)
   1c: запуск `bash run_iter6.sh` (возобновляемый, logs/iter_done)
 - [ ] 1c. Гибрид с новым k / p_blow (26_iter_eval.py), сравнить с it12 на val
-- [ ] 2. Переменный k в активном режиме
+- [~] 2. Переменный k в активном режиме
+  Офлайн (35_k_active_check.py, растущие срезы): тест 0.086/0.132/0.156/0.164 -> 0.106/0.161/0.178/0.183. Код в engine (k_dyn_active ref=0.7138 mult=1.589) и prod_hybrid.json; бэкап prod_hybrid_before_kact.json. ОСТАЛОСЬ: prod/checks.py после eval 1c (не параллельно)
 - [ ] 3. Онлайн-ассимиляция FIRMS на сайте
 - [ ] 4. Контуры P10/P50/P90
