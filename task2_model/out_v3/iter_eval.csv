@@ -291,7 +291,7 @@ iter,name,head,unet,src,part,horizon_h,F1,lo,hi,precision,recall,F1_tol1,F1_tol2
 12,all4kdyn,hybrid,wx_tta+wxbig_tta+wxn_tta+wxbign_tta,gfsa,test,24.0,0.2493,0.215,0.2856,0.232,0.2694,0.3709,0.4657,0.2982,1.1613,0.0905,0.0225,0.845,0.809
 12,all4kdyn,hybrid,wx_tta+wxbig_tta+wxn_tta+wxbign_tta,gfsa,test,48.0,0.2865,0.2436,0.3292,0.2577,0.3226,0.4244,0.5337,0.3302,1.2518,0.1169,0.0208,,
 12,all4kdyn,hybrid,wx_tta+wxbig_tta+wxn_tta+wxbign_tta,gfsa,test,72.0,0.3078,0.261,0.3551,0.2745,0.3504,0.4507,0.5611,0.35,1.2765,0.1338,0.0204,0.888,0.852
-12,all4kdyn,hybrid,wx_tta+wxbig_tta+wxn_tta+wxbign_tta,era5,reserves,12.0,0.2779,0.2211,0.3508,0.2022,0.4441,0.3488,0.4158,0.4455,2.1965,0.1,0.0481,,
-12,all4kdyn,hybrid,wx_tta+wxbig_tta+wxn_tta+wxbign_tta,era5,reserves,24.0,0.3876,0.2695,0.4837,0.2822,0.6184,0.4745,0.5483,0.6211,2.1912,0.2262,0.0156,0.603,0.539
-12,all4kdyn,hybrid,wx_tta+wxbig_tta+wxn_tta+wxbign_tta,era5,reserves,48.0,0.4378,0.2907,0.555,0.3319,0.6428,0.5146,0.5798,0.6437,1.9366,0.2631,0.0164,,
-12,all4kdyn,hybrid,wx_tta+wxbig_tta+wxn_tta+wxbign_tta,era5,reserves,72.0,0.47,0.3143,0.6123,0.3645,0.6617,0.5386,0.5969,0.6618,1.8155,0.2895,0.0188,0.577,0.559
+12,all4kdyn,hybrid,wx_tta+wxbig_tta+wxn_tta+wxbign_tta,era5,reserves,12.0,0.2887,0.2309,0.3647,0.227,0.3966,0.3639,0.4329,0.3973,1.7472,0.1214,0.0368,,
+12,all4kdyn,hybrid,wx_tta+wxbig_tta+wxn_tta+wxbign_tta,era5,reserves,24.0,0.4215,0.3262,0.5123,0.3325,0.5756,0.5129,0.5895,0.5795,1.7309,0.2395,0.028,0.618,0.523
+12,all4kdyn,hybrid,wx_tta+wxbig_tta+wxn_tta+wxbign_tta,era5,reserves,48.0,0.4664,0.3278,0.5635,0.3766,0.6126,0.5461,0.6123,0.6141,1.6267,0.2819,0.0264,,
+12,all4kdyn,hybrid,wx_tta+wxbig_tta+wxn_tta+wxbign_tta,era5,reserves,72.0,0.4971,0.3481,0.6186,0.4081,0.6359,0.5672,0.6256,0.6365,1.5582,0.3066,0.0455,0.577,0.57

@@ -40,37 +40,37 @@
   {
    "mode": "expected",
    "h": 12,
-   "area_med": 1.5,
-   "grows": 0.931,
-   "cos": 0.976,
-   "downwind": 0.931,
+   "area_med": 3.0,
+   "grows": 1.0,
+   "cos": 0.994,
+   "downwind": 1.0,
    "cos_unet": 0.06
   },
   {
    "mode": "expected",
    "h": 24,
-   "area_med": 1.5,
-   "grows": 0.944,
-   "cos": 0.973,
-   "downwind": 0.944,
+   "area_med": 3.5,
+   "grows": 1.0,
+   "cos": 0.99,
+   "downwind": 1.0,
    "cos_unet": 0.018
   },
   {
    "mode": "expected",
    "h": 48,
-   "area_med": 2.125,
-   "grows": 0.956,
-   "cos": 0.971,
-   "downwind": 0.95,
+   "area_med": 3.5,
+   "grows": 1.0,
+   "cos": 0.989,
+   "downwind": 1.0,
    "cos_unet": 0.079
   },
   {
    "mode": "expected",
    "h": 72,
-   "area_med": 2.25,
-   "grows": 0.975,
-   "cos": 0.963,
-   "downwind": 0.95,
+   "area_med": 3.5,
+   "grows": 1.0,
+   "cos": 0.988,
+   "downwind": 1.0,
    "cos_unet": 0.177
   }
  ],
@@ -102,16 +102,16 @@
  ],
  "nonburnable_burnt_share": 0.0,
  "test400_F1_engine": {
-  "12h": 0.222,
-  "24h": 0.191,
-  "48h": 0.321,
-  "72h": 0.307
+  "12h": 0.248,
+  "24h": 0.2,
+  "48h": 0.326,
+  "72h": 0.31
  },
  "test400_F1_offline": {
-  "12h": 0.223,
-  "24h": 0.191,
-  "48h": 0.321,
-  "72h": 0.307
+  "12h": 0.242,
+  "24h": 0.198,
+  "48h": 0.326,
+  "72h": 0.308
  },
  "test400_F1_engine_active_on_growing": {
   "12h": 0.082,
@@ -119,5 +119,5 @@
   "48h": 0.168,
   "72h": 0.162
  },
- "sec": 1372.0
+ "sec": 1446.1
 }
